@@ -1,0 +1,6 @@
+.DS_Store
+*.pyc
+controllers/*.pyc
+models/*.pyc
+err/*.pyc
+slib/*.pyc

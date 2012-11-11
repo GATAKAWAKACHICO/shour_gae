@@ -29,6 +29,8 @@ class ShourUser(db.Model):
     twitter_id = db.StringProperty()
     created_at = db.DateTimeProperty(auto_now_add=True)
     last_login = db.DateTimeProperty(auto_now_add=False)
+    active = db.BooleanProperty(required=True)
+    token = db.StringProperty(required=True)
 
     @classmethod
     def sign_up_check(self, mail):
@@ -44,9 +46,13 @@ class ShourUser(db.Model):
         entity = query.get()
         if entity:
             if entity.password == ShourUser.encrypt_password(entity.rsa_pub_key, password):
-                entity.last_login = datetime.datetime.now()
-                db.put(entity)
-                return entity.key().id()
+                if entity.active == True:
+                    entity.last_login = datetime.datetime.now()
+                    db.put(entity)
+                    return entity.key().id()
+                else:
+                    # 認証失敗：アカウントがアクティベートされていない
+                    raise ShourAppError(10005)
             else:
                 # 認証失敗：パスワードが異なる
                 raise ShourAppError(10001)
@@ -60,9 +66,13 @@ class ShourUser(db.Model):
             entity = ShourUser.get_by_id(int(user_id))
             if entity:
                 if entity.password == ShourUser.encrypt_password(entity.rsa_pub_key, password):
-                    entity.last_login = datetime.datetime.now()
-                    db.put(entity)
-                    return entity.key().id()
+                    if entity.active == True:
+                        entity.last_login = datetime.datetime.now()
+                        db.put(entity)
+                        return entity.key().id()
+                    else:
+                        # 認証失敗：アカウントがアクティベートされていない
+                        raise ShourAppError(10005)
                 else:
                     # 認証失敗：パスワードが異なる
                     raise ShourAppError(10001)

@@ -27,23 +27,18 @@ models_dir = 'models'
 sys.path.append(apppath+'/'+controllers_dir)
 sys.path.append(apppath+'/'+models_dir)
 # コントローラ
-from shouruser_controller import ShourUserSignInEmail, ShourUserLoginEmail
+from shouruser_controller import ShourUserSignInEmail, ShourUserLoginEmail, ShourUserActivate
 from shourpost_controller import ShourPostAdd
 from shourfriend_controller import ShourFriendGenereteRequest, ShourFriendNoticeRequest, ShourFriendRequestAccept, ShourFriendDestroy
 from shouruserprofile_controller import ShourProfileShow
-# モデル
-from shouruser import ShourUser as shour_user
-
-class MainHandler(webapp.RequestHandler):
-    def get(self):
-        self.response.write("We're making shour bigger.")
 
 # URLルートの設定
 app = webapp.WSGIApplication([
-    ('/', MainHandler),
     # /users
     ('/users/sign_in_with_email', ShourUserSignInEmail),
     ('/users/login_with_email', ShourUserLoginEmail),
+    # /activate
+    ('/activate', ShourUserActivate),
     # /profile
     ('/profile/show', ShourProfileShow),
     # /posts

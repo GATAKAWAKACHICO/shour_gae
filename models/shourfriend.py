@@ -108,3 +108,11 @@ class ShourFriend(db.Model):
     def destroy(self, friendship):
         # エンティティの削除
         db.delete(friendship)
+
+    @classmethod
+    def show_all_friends(self, user_id):
+        query = ShourFriend.all()
+        query.filter("user_id =", int(user_id))
+        query.filter("status =", 2)
+        friendships = query.fetch(1000)
+        return friendships

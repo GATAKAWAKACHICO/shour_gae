@@ -10,6 +10,17 @@ indexes:
 # automatically uploaded to the admin console when you next deploy
 # your application using appcfg.py.
 
+- kind: ShourPost
+  properties:
+  - name: friend_id
+  - name: created_at
+    direction: desc
+
+- kind: ShourPost
+  properties:
+  - name: friend_id
+  - name: start_time
+
 - kind: ShourUser
   properties:
   - name: ID

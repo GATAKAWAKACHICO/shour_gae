@@ -29,6 +29,7 @@ sys.path.append(apppath+'/'+models_dir)
 # コントローラ
 from shouruser_controller import ShourUserSignInEmail, ShourUserLoginEmail, ShourUserActivate
 from shourpost_controller import ShourPostAdd
+from shourfeed_controller import ShourFeedShowNew, ShourFeedShowNear
 from shourfriend_controller import ShourFriendGenereteRequest, ShourFriendNoticeRequest, ShourFriendRequestAccept, ShourFriendDestroy
 from shouruserprofile_controller import ShourProfileShow
 
@@ -43,6 +44,9 @@ app = webapp.WSGIApplication([
     ('/profile/show', ShourProfileShow),
     # /posts
     ('/posts/add', ShourPostAdd),
+    # /feeds
+    ('/feeds/new', ShourFeedShowNew),
+    ('/feeds/near', ShourFeedShowNear),
     # /friends
     ('/friends/request', ShourFriendGenereteRequest),
     ('/friends/notice', ShourFriendNoticeRequest),

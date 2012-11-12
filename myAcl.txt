@@ -1,0 +1,51 @@
+<?xml version="1.0" ?>
+<AccessControlList>
+    <Owner>
+        <ID>
+            00b4903a97aa86664785c5a5f81ce54962d637e3cd73960635e74984a468085a
+        </ID>
+    </Owner>
+    <Entries>
+        <Entry>
+            <Scope type="GroupById">
+                <ID>
+                    00b4903a97aa86664785c5a5f81ce54962d637e3cd73960635e74984a468085a
+                </ID>
+            </Scope>
+            <Permission>
+                FULL_CONTROL
+            </Permission>
+        </Entry>
+        <Entry>
+            <Scope type="GroupById">
+                <ID>
+                    00b4903a978b10988e89a281eb1da347f4cb1edfc95ca6bc9ff80c60952a744c
+                </ID>
+            </Scope>
+            <Permission>
+                FULL_CONTROL
+            </Permission>
+        </Entry>
+        <Entry>
+            <Scope type="GroupById">
+                <ID>
+                    00b4903a97937ec0ba65af83dc5f6bef78771a5c1177cf992258070691ef5ed1
+                </ID>
+            </Scope>
+            <Permission>
+                READ
+            </Permission>
+        </Entry>
+        <Entry>
+            <Scope type="UserByEmail">
+                <EmailAddress>
+                    sh-hringhorni@appspot.gserviceaccount.com
+                </EmailAddress>
+            </Scope>
+            <Permission>
+                WRITE
+            </Permission>
+        </Entry>
+    </Entries>
+</AccessControlList>
+

@@ -32,7 +32,8 @@ class ShourUserSignInEmail(webapp.RequestHandler):
         name = self.request.get('name')
         first_name = self.request.get('first_name')
         last_name = self.request.get('last_name')
-        picture = self.request.body_file.vars['picture']
+        picture = self.request.get('picture')
+        #picture = self.request.body_file.vars['picture']
         password = self.request.get('password')
         email = self.request.get('mail')
         lang = self.request.get('lang')
@@ -58,11 +59,20 @@ class ShourUserSignInEmail(webapp.RequestHandler):
         # 画像が送られてきたかどうかで分岐
         if picture:
             # バイナリの画像データがある場合
+            body_file_name = self.request.body_file.vars['picture'].filename.decode("utf8")
+            root_, ext_ = os.path.splitext(body_file_name)
+            #header = self.request.body_file.vars['picture'].headers['content-type']
+            try:
+                header = ShourUser.get_header(ext_)
+            except ShourAppError, e:
+                data = {"message": False, "err":e.value}
+                json.dump(data, self.response.out, ensure_ascii=False)
+                return
             # DB保存用のurl
-            picture_url = "http://commondatastorage.googleapis.com/sh_avatar/user/" + token + ".jpg"
+            picture_url = "http://commondatastorage.googleapis.com/sh_avatar/user/" + token + ext_
             # Google Cloud Storage用url
-            READ_PATH = '/gs/sh_avatar/user/' + token + '.jpg'
-            write_path = files.gs.create(READ_PATH, mime_type='image/jpeg', acl='public-read')
+            READ_PATH = '/gs/sh_avatar/user/' + token + ext_
+            write_path = files.gs.create(READ_PATH, mime_type=header, acl='public-read')
             with files.open(write_path, 'a') as fp:
                 fp.write(picture)
             files.finalize(write_path)

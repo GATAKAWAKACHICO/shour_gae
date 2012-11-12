@@ -123,3 +123,30 @@ class ShourUser(db.Model):
         else:
             # プロフィール（アカウント）が見つからない
             raise ShourAppError(10003)
+
+    @classmethod
+    def get_ext(self, header):
+        if header == 'image/jpeg':
+            ext = ".jpg"
+            return ext
+        elif header == 'image/png':
+            ext = ".png"
+            return ext
+        elif header == 'image/gif':
+            ext = ".gif"
+            return ext
+        else:
+            # 画像ファイルがおかしい
+            raise ShourAppError("10007:" + header)
+
+    @classmethod
+    def get_header(self, ext_):
+        if ext_ == '.jpg' or ext_ == '.jpeg':
+            return 'image/jpeg'
+        elif ext_ == ".png":
+            return 'image/png'
+        elif ext_ == '.gif':
+            return 'image/gif'
+        else:
+            # 画像ファイルがおかしい
+            raise ShourAppError("10007:" + ext_)

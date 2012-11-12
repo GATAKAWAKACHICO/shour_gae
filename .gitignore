@@ -4,3 +4,4 @@ controllers/*.pyc
 models/*.pyc
 err/*.pyc
 slib/*.pyc
+dev_post.txt

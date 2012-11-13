@@ -11,6 +11,7 @@ sys.path.append(os.pardir+'/'+models_dir)
 from google.appengine.ext import db
 from shouruser import ShourUser
 from shourfriend import ShourFriend
+from shourpost import ShourPost
 
 # ライブラリのモジュール読み込み
 lib_dir = 'slib'
@@ -47,18 +48,19 @@ class ShourFriendNoticeRequest(webapp.RequestHandler):
 class ShourFriendRequestAccept(webapp.RequestHandler):
     def post(self):
         self.response.content_type = "application/json; charset=utf-8"
-        user_id = self.request.get('user_id')
-        friend_id = self.request.get('friend_id')
+        user_id = int(self.request.get('user_id'))
+        friend_id = int(self.request.get('friend_id'))
         try:
             ShourFriend.is_acceptable(user_id, friend_id)
             # リクエストされていたデータ
-            query = ShourFriend.all()
-            query.filter("user_id =", int(friend_id))
-            query.filter("friend_id =", int(user_id))
-            friend_request = query.get()
+            friend_request = ShourFriend.get_relation(friend_id, user_id)
+            # 友人リクエスト承認者の投稿したイベント
+            user_events = ShourPost.get_master_event(user_id)
+            # 友人リクエスト申請者の投稿したイベント
+            friend_events = ShourPost.get_master_event(friend_id)
             # クロスグループトランザクションCross-Group (XG) Transactions有効化
             xg_on = db.create_transaction_options(xg=True)
-            db.run_in_transaction_options(xg_on, ShourFriend.accept, user_id, friend_id, friend_request)
+            db.run_in_transaction_options(xg_on, ShourFriend.accept, user_id, friend_id, friend_request, user_events, friend_events)
             data = {"message": True}
             json.dump(data, self.response.out, ensure_ascii=False)
         except ShourAppError, e:

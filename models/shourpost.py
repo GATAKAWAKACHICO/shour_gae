@@ -63,3 +63,11 @@ class ShourPost(db.Model):
         query.order("start_time")
         feed = query.fetch(limit=limit, offset=offset)
         return feed
+
+    @classmethod
+    def get_master_event(self, user_id):
+        query = ShourPost.all()
+        query.filter("user_id =", int(user_id))
+        query.filter("master =", True)
+        events = query.fetch(1000)
+        return events

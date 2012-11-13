@@ -10,6 +10,7 @@ models_dir = 'models'
 sys.path.append(os.pardir+'/'+models_dir)
 from google.appengine.ext import db
 from shouruser import ShourUser
+from shourpost import ShourPost
 
 # 独自例外モジュール読み込み
 err_dir = 'err'
@@ -87,11 +88,48 @@ class ShourFriend(db.Model):
             raise ShourAppError(20003)
 
     @classmethod
-    def accept(self, user_id, friend_id, friend_request):
+    def accept(self, user_id, friend_id, friend_request, user_events, friend_events):
         friend_accept = ShourFriend(user_id=int(user_id), friend_id=int(friend_id), status=2)
-        friend_accept.put()
         friend_request.status = 2
-        friend_request.put()
+        # 一括保存用リスト(リクエスト承認データ、申請リクエストデータ)
+        records = [friend_accept, friend_request]
+        # 承認者のイベントを申請者に公開
+        for ev in user_events:
+            shour_post = ShourPost(
+                    user_id=user_id,
+                    friend_id=friend_id,
+                    master=False,
+                    start_time=ev.start_time,
+                    end_time=ev.end_time,
+                    place_name=ev.place_name,
+                    place_address=ev.place_address,
+                    place_lat=ev.place_lat,
+                    place_lng=ev.place_lng,
+                    comment=ev.comment,
+                    status_id=ev.status_id,
+                    public_id=ev.public_id,
+                    modified_at=ev.modified_at
+                )
+            records.append(shour_post)
+        # 申請者のイベントを承認者に公開
+        for ev in friend_events:
+            shour_post = ShourPost(
+                    user_id=friend_id,
+                    friend_id=user_id,
+                    master=False,
+                    start_time=ev.start_time,
+                    end_time=ev.end_time,
+                    place_name=ev.place_name,
+                    place_address=ev.place_address,
+                    place_lat=ev.place_lat,
+                    place_lng=ev.place_lng,
+                    comment=ev.comment,
+                    status_id=ev.status_id,
+                    public_id=ev.public_id,
+                    modified_at=ev.modified_at
+                )
+            records.append(shour_post)
+        db.put(records)
 
     @classmethod
     def get_relation(self, user_id, friend_id):
@@ -102,7 +140,8 @@ class ShourFriend(db.Model):
         if entity:
             return entity
         else:
-            return None
+            # 友人関係が存在しない
+            raise ShourAppError(20006)
 
     @classmethod
     def destroy(self, friendship):

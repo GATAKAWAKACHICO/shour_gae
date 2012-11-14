@@ -24,7 +24,8 @@ class ShourUser(db.Model):
     password = db.BlobProperty(required=True)
     rsa_pub_key = db.BlobProperty(required=True)
     mail = db.EmailProperty(required=True)
-    picture_url = db.StringProperty()
+    picture_url = db.StringProperty(required=True)
+    picture_id = db.IntegerProperty(required=True)
     facebook_id = db.StringProperty()
     twitter_id = db.StringProperty()
     created_at = db.DateTimeProperty(auto_now_add=True)
@@ -34,6 +35,7 @@ class ShourUser(db.Model):
 
     @classmethod
     def sign_up_check(self, mail):
+        # メアド重複をさけるため、ここは祖先クエリをつかったほうがよいのかも？
         query = ShourUser.all(keys_only=True).filter('mail', mail)
         entity = query.get()
         if entity:

@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from google.appengine.ext import webapp
+from google.appengine.api import urlfetch
 from google.appengine.api import mail
 from google.appengine.api import files
 import json
@@ -33,7 +34,6 @@ class ShourUserSignInEmail(webapp.RequestHandler):
         first_name = self.request.get('first_name')
         last_name = self.request.get('last_name')
         picture = self.request.get('picture')
-        #picture = self.request.body_file.vars['picture']
         password = self.request.get('password')
         email = self.request.get('mail')
         lang = self.request.get('lang')
@@ -45,17 +45,11 @@ class ShourUserSignInEmail(webapp.RequestHandler):
             json.dump(data, self.response.out, ensure_ascii=False)
             return
         # 本登録用トークンの生成
-        try:
-            tg = TokenGenerator()
-            token = tg.generate_token()
-            while ShourTempUser.is_duplicate_token(token) == False:
-                tg = TokenGenerator()
-                token = tg.generate_token()
-            tmp_user = ShourTempUser(token=token)
-        except ShourAppError, e:
-            data = {"message": False, "err":e.value}
-            json.dump(data, self.response.out, ensure_ascii=False)
-            return
+        tmp_user = ShourTempUser(used=False)
+        tmp_user.put()
+        token = str(tmp_user.key())
+        # 後のtmp_user_idと同値になる重要変数
+        picture_id = tmp_user.key().id()
         # 画像が送られてきたかどうかで分岐
         if picture:
             # バイナリの画像データがある場合
@@ -69,7 +63,7 @@ class ShourUserSignInEmail(webapp.RequestHandler):
                 json.dump(data, self.response.out, ensure_ascii=False)
                 return
             # DB保存用のurl
-            picture_url = "http://commondatastorage.googleapis.com/sh_avatar/user/" + token + ext_
+            picture_url = "http://commondatastorage.googleapis.com/sh_avatar/user/" + str(picture_id) + ext_
             # Google Cloud Storage用url
             READ_PATH = '/gs/sh_avatar/user/' + token + ext_
             write_path = files.gs.create(READ_PATH, mime_type=header, acl='public-read')
@@ -82,12 +76,12 @@ class ShourUserSignInEmail(webapp.RequestHandler):
         # 公開鍵作成
         rsa = ShourUser.generate_rsa_pub_and_private_key(password)
         # POSTされたユーザデータをモデルに変換
-        shour_user = ShourUser(
-        name=name, first_name=first_name, last_name=last_name, picture_url=picture_url, rsa_pub_key=rsa[0], password=rsa[1], mail=email, active=False, token=token)
+        shour_user = ShourUser(parent=tmp_user,
+        name=name, first_name=first_name, last_name=last_name, picture_url=picture_url, picture_id=picture_id, rsa_pub_key=rsa[0], password=rsa[1], mail=email, active=False, token=token)
+        user_id = 0
         try:
-            # クロスグループトランザクションCross-Group (XG) Transactions有効化
-            xg_on = db.create_transaction_options(xg=True)
-            db.run_in_transaction_options(xg_on, ShourTempUser.save_user_temporary, tmp_user, shour_user)
+            shour_user.put()
+            user_id = shour_user.key().id()
             data = {"message": True}
             json.dump(data, self.response.out, ensure_ascii=False)
         except ShourAppError, e:
@@ -99,11 +93,12 @@ class ShourUserSignInEmail(webapp.RequestHandler):
             return
         # メール本文言語対応
         mabd = MailBody()
-        body = mabd.thank_after_registered(name, token, lang)
+        body = mabd.thank_after_registered(name, token, str(picture_id), str(user_id), lang)
+        #htmlbody = mabd.thank_after_registered_by_html(name, token, str(picture_id), str(user_id), lang)
         mail.send_mail(sender="webmaster@shour.jp",
               to=email,
               subject="Welcome to Shour",
-              body=body
+              body=body,
               )
 
 class ShourUserLoginEmail(webapp.RequestHandler):
@@ -122,8 +117,10 @@ class ShourUserLoginEmail(webapp.RequestHandler):
 class ShourUserActivate(webapp.RequestHandler):
     def get(self):
         token = self.request.get('t')
+        tmp_user_id = self.request.get('i')
+        user_id = self.request.get('u')
         try:
-            ShourTempUser.activate(token)
+            ShourTempUser.activate(token, tmp_user_id, user_id)
             self.redirect("tel:")
         except ShourAppError, e:
             self.response.out.write('<script>alert("エラーが発生しました");</script>')

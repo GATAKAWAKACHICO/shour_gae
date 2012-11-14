@@ -29,8 +29,9 @@ class ShourFriendGenereteRequest(webapp.RequestHandler):
         user_id = self.request.get('user_id')
         friend_id = self.request.get('friend_id')
         try:
-            ShourFriend.is_requestable(user_id, friend_id)
-            ShourFriend.request(user_id, friend_id)
+            users = ShourFriend.is_requestable(user_id, friend_id)
+            ShourFriend.is_duplicate_request(user_id, friend_id)
+            ShourFriend.request(users[0], users[1])
             data = {"message": True}
             json.dump(data, self.response.out, ensure_ascii=False)
         except ShourAppError, e:
@@ -48,10 +49,11 @@ class ShourFriendNoticeRequest(webapp.RequestHandler):
 class ShourFriendRequestAccept(webapp.RequestHandler):
     def post(self):
         self.response.content_type = "application/json; charset=utf-8"
-        user_id = int(self.request.get('user_id'))
-        friend_id = int(self.request.get('friend_id'))
+        user_id = self.request.get('user_id')
+        friend_id = self.request.get('friend_id')
         try:
-            ShourFriend.is_acceptable(user_id, friend_id)
+            users = ShourFriend.is_acceptable(user_id, friend_id)
+            ShourFriend.is_duplicate_accept(user_id, friend_id)
             # リクエストされていたデータ
             friend_request = ShourFriend.get_relation(friend_id, user_id)
             # 友人リクエスト承認者の投稿したイベント
@@ -60,7 +62,7 @@ class ShourFriendRequestAccept(webapp.RequestHandler):
             friend_events = ShourPost.get_master_event(friend_id)
             # クロスグループトランザクションCross-Group (XG) Transactions有効化
             xg_on = db.create_transaction_options(xg=True)
-            db.run_in_transaction_options(xg_on, ShourFriend.accept, user_id, friend_id, friend_request, user_events, friend_events)
+            db.run_in_transaction_options(xg_on, ShourFriend.accept, users[0], users[1], friend_request, user_events, friend_events)
             data = {"message": True}
             json.dump(data, self.response.out, ensure_ascii=False)
         except ShourAppError, e:

@@ -21,6 +21,19 @@ indexes:
   - name: friend_id
   - name: start_time
 
+- kind: ShourPost
+  properties:
+  - name: friend_id
+  - name: start_time
+  - name: created_at
+    direction: desc
+
+- kind: ShourPost
+  properties:
+  - name: user_id
+  - name: created_at
+    direction: desc
+
 - kind: ShourUser
   properties:
   - name: ID

@@ -3,14 +3,15 @@
 
 import datetime
 import sys
+import logging
 
 # モデルのモジュール読み込み
 import sys,os
 models_dir = 'models'
 sys.path.append(os.pardir+'/'+models_dir)
 from google.appengine.ext import db
+from google.appengine.api.datastore_types import Key
 from shouruser import ShourUser
-from shourpost import ShourPost
 
 # 独自例外モジュール読み込み
 err_dir = 'err'
@@ -21,40 +22,42 @@ class ShourFriend(db.Model):
     user_id = db.IntegerProperty(required=True)
     friend_id = db.IntegerProperty(required=True)
     status = db.IntegerProperty(required=True)
+    user_reference = db.ReferenceProperty(ShourUser)
     created_at = db.DateTimeProperty(auto_now_add=True, required=True)
 
     @classmethod
     def is_requestable(self, user_id, friend_id):
-        if ShourUser.is_exist(user_id) == False:
-            # 申請元ユーザーが存在しない
+        user = ShourUser.get_by_id(int(user_id))
+        friend = ShourUser.get_by_id(int(friend_id))
+        if not user:
+            # 申請元が存在しない
             raise ShourAppError(20001)
-        if ShourUser.is_exist(friend_id) == False:
-            # 申請先ユーザーが存在しない
+        if not friend:
+            # 相手方が存在しない
             raise ShourAppError(20002)
-        ShourFriend.is_duplicate_request(user_id, friend_id)
+        else:
+            # 申請元または相手方ユーザーが存在しない
+            return [user, friend]
 
     @classmethod
     def is_duplicate_request(self, user_id, friend_id):
         # すでにリクエストしていないか
-        query = ShourFriend.all()
-        query.filter("user_id =", int(user_id))
-        query.filter("friend_id =", int(friend_id))
-        entity = query.get()
-        if entity:
+        query = ShourFriend.all(keys_only=True).filter("user_id =", int(user_id)).filter("friend_id =", int(friend_id))
+        friend_request = query.get()
+        if friend_request:
             # すでにリクエストしている
             raise ShourAppError(20003)
         # すでにリクエストされてないか
-        query = ShourFriend.all()
-        query.filter("user_id =", int(friend_id))
-        query.filter("friend_id =", int(user_id))
+        query = ShourFriend.all(keys_only=True).filter("user_id =", int(friend_id)).filter("friend_id =", int(user_id))
         entity = query.get()
         if entity:
             # すでにリクエストされている
             raise ShourAppError(20004)
 
     @classmethod
-    def request(self, user_id, friend_id):
-        friend_request = ShourFriend(user_id=int(user_id), friend_id=int(friend_id), status=1)
+    def request(self, user, friend):
+        # 引数はShourUserオブジェクト
+        friend_request = ShourFriend(user_id=user.key().id(), friend_id=friend.key().id(), status=1, user_reference=user.key())
         try:
             friend_request.put()
         except:
@@ -68,16 +71,35 @@ class ShourFriend(db.Model):
         query.filter("friend_id =", int(user_id))
         query.filter("status =", 1)
         friend_requests = query.fetch(5)
-        return friend_requests
+        datas = []
+        if friend_requests:
+            for request in friend_requests:
+                data = {
+                "created_at":request.created_at, 
+                "user":{
+                "user_id":request.user_reference.key().id(),
+                "name":request.user_reference.name,
+                "picture_url":request.user_reference.picture_url
+                }}
+                datas.append(data)
+        return datas
 
     @classmethod
     def is_acceptable(self, user_id, friend_id):
-        if ShourUser.is_exist(user_id) == False:
-            # 申請元ユーザーが存在しない
+        user = ShourUser.get_by_id(int(user_id))
+        friend = ShourUser.get_by_id(int(friend_id))
+        if not user:
+            # 申請元が存在しない
             raise ShourAppError(20001)
-        if ShourUser.is_exist(friend_id) == False:
-            # 申請先ユーザーが存在しない
+        if not friend:
+            # 相手方が存在しない
             raise ShourAppError(20002)
+        else:
+            # 申請元または相手方ユーザーが存在しない
+            return [user, friend]
+    
+    @classmethod
+    def is_duplicate_accept(self, user_id, friend_id):
         # すでにリクエストしていないか
         query = ShourFriend.all()
         query.filter("user_id =", int(user_id))
@@ -88,47 +110,14 @@ class ShourFriend(db.Model):
             raise ShourAppError(20003)
 
     @classmethod
-    def accept(self, user_id, friend_id, friend_request, user_events, friend_events):
-        friend_accept = ShourFriend(user_id=int(user_id), friend_id=int(friend_id), status=2)
+    def accept(self, user, friend, friend_request, user_events, friend_events):
+        user_id = user.key().id()
+        friend_id = friend.key().id()
+        # 祖先パスは/承認者(ShourUser)/ShourFriend
+        friend_accept = ShourFriend(parent=user, user_id=user_id, friend_id=friend_id, status=2, user_reference=user.key())
         friend_request.status = 2
         # 一括保存用リスト(リクエスト承認データ、申請リクエストデータ)
         records = [friend_accept, friend_request]
-        # 承認者のイベントを申請者に公開
-        for ev in user_events:
-            shour_post = ShourPost(
-                    user_id=user_id,
-                    friend_id=friend_id,
-                    master=False,
-                    start_time=ev.start_time,
-                    end_time=ev.end_time,
-                    place_name=ev.place_name,
-                    place_address=ev.place_address,
-                    place_lat=ev.place_lat,
-                    place_lng=ev.place_lng,
-                    comment=ev.comment,
-                    status_id=ev.status_id,
-                    public_id=ev.public_id,
-                    modified_at=ev.modified_at
-                )
-            records.append(shour_post)
-        # 申請者のイベントを承認者に公開
-        for ev in friend_events:
-            shour_post = ShourPost(
-                    user_id=friend_id,
-                    friend_id=user_id,
-                    master=False,
-                    start_time=ev.start_time,
-                    end_time=ev.end_time,
-                    place_name=ev.place_name,
-                    place_address=ev.place_address,
-                    place_lat=ev.place_lat,
-                    place_lng=ev.place_lng,
-                    comment=ev.comment,
-                    status_id=ev.status_id,
-                    public_id=ev.public_id,
-                    modified_at=ev.modified_at
-                )
-            records.append(shour_post)
         db.put(records)
 
     @classmethod
@@ -153,5 +142,6 @@ class ShourFriend(db.Model):
         query = ShourFriend.all()
         query.filter("user_id =", int(user_id))
         query.filter("status =", 2)
+        # 友達1000人まで
         friendships = query.fetch(1000)
         return friendships

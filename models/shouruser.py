@@ -64,6 +64,7 @@ class ShourUser(db.Model):
 
     @classmethod
     def shour_authorize(self, user_id, password):
+        # 認証した後ユーザーデータを取得
         if user_id and password:
             entity = ShourUser.get_by_id(int(user_id))
             if entity:
@@ -71,7 +72,8 @@ class ShourUser(db.Model):
                     if entity.active == True:
                         entity.last_login = datetime.datetime.now()
                         db.put(entity)
-                        return entity.key().id()
+                        #return entity.key().id()
+                        return entity
                     else:
                         # 認証失敗：アカウントがアクティベートされていない
                         raise ShourAppError(10005)

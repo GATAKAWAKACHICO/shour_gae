@@ -48,7 +48,7 @@ class ShourUserSignInEmail(webapp.RequestHandler):
         tmp_user = ShourTempUser(used=False)
         tmp_user.put()
         token = str(tmp_user.key())
-        # 後のtmp_user_idと同値になる重要変数
+        # 画像のprofile_id、ShourTempUserのidと同じ
         picture_id = tmp_user.key().id()
         # 画像が送られてきたかどうかで分岐
         if picture:
@@ -76,7 +76,7 @@ class ShourUserSignInEmail(webapp.RequestHandler):
         # 公開鍵作成
         rsa = ShourUser.generate_rsa_pub_and_private_key(password)
         # POSTされたユーザデータをモデルに変換
-        shour_user = ShourUser(parent=tmp_user,
+        shour_user = ShourUser(
         name=name, first_name=first_name, last_name=last_name, picture_url=picture_url, picture_id=picture_id, rsa_pub_key=rsa[0], password=rsa[1], mail=email, active=False, token=token)
         user_id = 0
         try:

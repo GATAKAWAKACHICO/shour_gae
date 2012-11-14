@@ -32,17 +32,8 @@ class ShourTempUser(db.Model):
     @classmethod
     def activate(self, token, tmp_user_id, user_id):
         if token:
-            # tパラメータで渡されたキー(トークン)をKeyオブジェクトに変換
-            tmp_user_key = Key(encoded=token)
-            tmp_user = db.get(tmp_user_key)
-            user_key = db.Key.from_path('ShourTempUser', int(tmp_user_id), 'ShourUser', int(user_id))
-            user = db.get(user_key)
-            #query = ShourTempUser.all()
-            #query.filter("token =", token)
-            #tmp_user = query.get()
-            #query2 = ShourUser.all()
-            #query2.filter('token =', token)
-            #user = query2.get()
+            tmp_user = db.get(token)
+            user = ShourUser.get_by_id(int(user_id))
         else:
             # アクティベートに失敗
             raise ShourAppError(10006)
@@ -54,9 +45,8 @@ class ShourTempUser(db.Model):
                 # アクティベートに失敗
                 raise ShourAppError(10006)
             # クロスグループトランザクションCross-Group (XG) Transactions有効化
-            #xg_on = db.create_transaction_options(xg=True)
-            #db.run_in_transaction_options(xg_on, ShourTempUser.activate_all, tmp_user, user)
-            db.run_in_transaction(ShourTempUser.activate_all, tmp_user, user)
+            xg_on = db.create_transaction_options(xg=True)
+            db.run_in_transaction_options(xg_on, ShourTempUser.activate_all, tmp_user, user)
         else:
             # アクティベートに失敗
             raise ShourAppError(10006)
@@ -66,12 +56,3 @@ class ShourTempUser(db.Model):
         tmp_user.used = True
         user.active = True
         db.put([tmp_user, user])
-
-    @classmethod
-    def is_duplicate_token(self, token):
-        query = ShourUser.all(keys_only=True).filter('token', token)
-        entity = query.get()
-        if entity:
-            return False
-        else:
-            return True

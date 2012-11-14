@@ -28,13 +28,13 @@ from shourapperror import ShourAppError
 class ShourFeedShowNew(webapp.RequestHandler):
     def post(self):
         self.response.content_type = "application/json"
-        user_id = int(self.request.get('user_id'))
+        user_id = self.request.get('user_id')
         password = self.request.get('password')
         offset = self.request.get('offset')
         # オフセットを初期化（パラメータが無ければoffset=0）
         offset = ShourPost.set_offset(offset)
         try:
-            user_id = ShourUser.shour_authorize(user_id, password)
+            user = ShourUser.shour_authorize(user_id, password)
         except ShourAppError, e:
             data = {"message": False, "err":e.value}
             json.dump(data, self.response.out, ensure_ascii=False)
@@ -53,7 +53,7 @@ class ShourFeedShowNear(webapp.RequestHandler):
         # オフセットを初期化（パラメータが無ければoffset=0）
         offset = ShourPost.set_offset(offset)
         try:
-            user_id = ShourUser.shour_authorize(user_id, password)
+            user = ShourUser.shour_authorize(user_id, password)
         except ShourAppError, e:
             data = {"message": False, "err":e.value}
             json.dump(data, self.response.out, ensure_ascii=False)
@@ -62,3 +62,23 @@ class ShourFeedShowNear(webapp.RequestHandler):
         feed = ShourPost.get_feed_near(user_id, 10, int(offset))
         data = jsonencoder.GqlEncoder().encode(feed)
         self.response.out.write(data)
+
+class ShourFeedRefreshShowNew(webapp.RequestHandler):
+    def post(self):
+        self.response.content_type = "application/json"
+        user_id = self.request.get('user_id')
+        password = self.request.get('password')
+        # オフセットいらない？
+        # offset = self.request.get('offset')
+        # オフセットを初期化（パラメータが無ければoffset=0）
+        # offset = ShourPost.set_offset(offset)
+        try:
+            user = ShourUser.shour_authorize(user_id, password)
+        except ShourAppError, e:
+            data = {"message": False, "err":e.value}
+            json.dump(data, self.response.out, ensure_ascii=False)
+            return
+        ShourPost.refresh_feed_new(user_id)
+        data = {"message": True}
+        json.dump(data, self.response.out, ensure_ascii=False)
+        

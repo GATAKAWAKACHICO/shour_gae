@@ -5,3 +5,6 @@ models/*.pyc
 err/*.pyc
 slib/*.pyc
 dev_post.txt
+.project
+.pydevproject
+.settings
